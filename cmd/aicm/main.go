@@ -56,6 +56,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	// 在获取git变更之前添加
+	if err := git.AddTrackedFiles(); err != nil {
+		fmt.Println("Failed to add tracked files:", err)
+		os.Exit(1)
+	}
+
 	// 获取git变更
 	changes, err := git.GetChanges()
 	if err != nil {
@@ -72,4 +78,21 @@ func main() {
 
 	fmt.Println("Generated commit message:")
 	fmt.Println(msg)
+
+	// 添加提交确认
+	fmt.Print("\nDo you want to commit with this message? (y/n): ")
+	var confirm string
+	fmt.Scanln(&confirm)
+	if strings.ToLower(confirm) != "y" {
+		fmt.Println("Commit canceled.")
+		return
+	}
+
+	// 执行git提交
+	if err := git.Commit(msg); err != nil {
+		fmt.Println("Failed to commit:", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("Commit successful!")
 }

@@ -43,3 +43,13 @@ func getFileDiff(fileName string) (string, error) {
 	}
 	return string(out), nil
 }
+
+func Commit(message string) error {
+	cmd := exec.Command("git", "commit", "-m", message)
+	return cmd.Run()
+}
+
+func AddTrackedFiles() error {
+	cmd := exec.Command("git", "add", "-u")
+	return cmd.Run()
+}

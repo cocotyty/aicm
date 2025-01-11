@@ -12,9 +12,15 @@ import (
 )
 
 const (
-	systemPrompt = `You are a helpful AI assistant that helps generate commit messages.
-For code changes, first describe what changed in each file, then generate a concise commit message.
-The commit message should follow the conventional commit format: "type: description"`
+	descriptionSystemPrompt = `You are a helpful AI assistant that helps analyze code changes.
+You will receive a JSON object containing file changes and need to describe what changed in each file.
+Respond with a JSON object where keys are filenames and values are change descriptions.
+Your response must only contain the JSON object, without any additional text or explanations.`
+
+	commitSystemPrompt = `You are a helpful AI assistant that helps generate commit messages.
+You will receive a JSON object containing file change descriptions.
+Generate a concise commit message following the conventional commit format: "type: description".
+Your response must only contain the commit message in the exact format "type: description", without any additional text, explanations, or polite phrases.`
 )
 
 type OpenAIMessage struct {
@@ -48,16 +54,21 @@ func GenerateCommitMessage(cfg *config.Config, changes []git.FileChange) (string
 
 func generateFileDescriptions(cfg *config.Config, changes []git.FileChange) (map[string]string, error) {
 	log.Println("Starting to generate file descriptions")
-	var prompt string
+
+	// 构建JSON格式的变更信息
+	changeData := make(map[string]string)
 	for _, change := range changes {
-		prompt += fmt.Sprintf("File: %s\nDiff:\n%s\n\n", change.FileName, change.Diff)
+		changeData[change.FileName] = change.Diff
 	}
-	prompt += "Please describe the changes in each file."
-	log.Printf("Generated prompt for %d files", len(changes))
+
+	changeJSON, err := json.Marshal(changeData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal changes: %v", err)
+	}
 
 	messages := []OpenAIMessage{
-		{Role: "system", Content: systemPrompt},
-		{Role: "user", Content: prompt},
+		{Role: "system", Content: descriptionSystemPrompt},
+		{Role: "user", Content: string(changeJSON)},
 	}
 
 	response, err := callOpenAI(cfg, messages)
@@ -76,16 +87,16 @@ func generateFileDescriptions(cfg *config.Config, changes []git.FileChange) (map
 
 func generateFinalCommitMessage(cfg *config.Config, descriptions map[string]string) (string, error) {
 	log.Println("Starting to generate final commit message")
-	var prompt string
-	for file, desc := range descriptions {
-		prompt += fmt.Sprintf("%s: %s\n", file, desc)
+
+	// 将描述信息转换为JSON
+	descJSON, err := json.Marshal(descriptions)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal descriptions: %v", err)
 	}
-	prompt += "Please generate a commit message following the conventional commit format."
-	log.Printf("Generated commit message prompt with %d file descriptions", len(descriptions))
 
 	messages := []OpenAIMessage{
-		{Role: "system", Content: systemPrompt},
-		{Role: "user", Content: prompt},
+		{Role: "system", Content: commitSystemPrompt},
+		{Role: "user", Content: string(descJSON)},
 	}
 
 	msg, err := callOpenAI(cfg, messages)
