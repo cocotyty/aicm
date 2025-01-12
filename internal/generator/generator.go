@@ -15,11 +15,14 @@ const (
 	descriptionSystemPrompt = `You are a helpful AI assistant that helps analyze code changes.
 You will receive a JSON object containing file changes and need to describe what changed in each file.
 Respond with a JSON object where keys are filenames and values are change descriptions.
+You should think about the change description in the perspective of the user who is reviewing the code and why the code is changed and what the target/purpose of the code is.
+Think whether the code is changed for a bug fix, you should describe the bug and how the code fixes the bug.
 Your response must only contain the JSON object, without any additional text or explanations.`
 
 	commitSystemPrompt = `You are a helpful AI assistant that helps generate commit messages.
 You will receive a JSON object containing file change descriptions.
 Generate a concise commit message following the conventional commit format: "type: description".
+You should think about the commit message in the perspective of the user who is reviewing the code and why the code is changed and what the target/purpose of the code is.
 Your response must only contain the commit message in the exact format "type: description", without any additional text, explanations, or polite phrases.`
 )
 

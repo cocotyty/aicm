@@ -1,18 +1,22 @@
 package git
 
 import (
+	"os"
 	"os/exec"
 	"strings"
 )
 
 type FileChange struct {
+	Action   string
 	FileName string
 	Diff     string
 }
 
 func GetChanges() ([]FileChange, error) {
 	// 获取修改的文件列表
-	out, err := exec.Command("git", "status", "--porcelain").Output()
+	cmd := exec.Command("git", "status", "--porcelain")
+	cmd.Stderr = os.Stderr
+	out, err := cmd.Output()
 	if err != nil {
 		return nil, err
 	}
@@ -22,13 +26,27 @@ func GetChanges() ([]FileChange, error) {
 		if len(line) < 4 {
 			continue
 		}
+		action := line[:1]
+
 		fileName := strings.TrimSpace(line[3:])
-		diff, err := getFileDiff(fileName)
-		if err != nil {
-			return nil, err
+		var diff string
+		if action != "D" {
+			diff, err = getFileDiff(fileName)
+			if err != nil {
+				return nil, err
+			}
+		}
+		switch action {
+		case "M":
+			action = "modified"
+		case "A":
+			action = "added"
+		case "D":
+			action = "deleted"
 		}
 		changes = append(changes, FileChange{
 			FileName: fileName,
+			Action:   action,
 			Diff:     diff,
 		})
 	}
@@ -37,7 +55,9 @@ func GetChanges() ([]FileChange, error) {
 }
 
 func getFileDiff(fileName string) (string, error) {
-	out, err := exec.Command("git", "diff", "--cached", fileName).Output()
+	cmd := exec.Command("git", "diff", "--cached", fileName)
+	cmd.Stderr = os.Stderr
+	out, err := cmd.Output()
 	if err != nil {
 		return "", err
 	}

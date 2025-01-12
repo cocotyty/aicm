@@ -18,7 +18,9 @@ test:
 # 安装到系统路径
 install: build
 	mv $(BINARY_NAME) /usr/local/bin/
-
+# install to go bin
+i: 
+	go install ./...
 # 格式化代码
 fmt:
 	go fmt ./...
